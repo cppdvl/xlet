@@ -1,34 +1,46 @@
+/*! \file uds.cpp
+ *  Unix Domain Socket implementation for DAWn Audio Relay Server
+ *  \author JGuarin (cppdvl) 2024
+ */
 #include "xlet.h"
-
-#include <thread>
 #include <sys/un.h>
-#include <functional>
 
-xlet::UDSlet::UDSlet(const std::string &sockpath, xlet::Direction direction, bool theLetListens)
+
+
+xlet::UDSlet::UDSlet(
+    const std::string &sockpath,
+    xlet::Direction direction,
+    bool theLetListens
+)
 {
+    this->direction = direction;
+
     if ( direction == xlet::Direction::INB && theLetListens == false)
     {
-        //TODO: Trigger a warning signal
         theLetListens = true;
     }
-
-    if ((sockfd_ = socket(AF_UNIX, SOCK_SEQPACKET, 0)) < 0)
+    else if ( direction == xlet::Direction::OUTB && theLetListens == true)
     {
-        //TODO: Trigger a warning signal
+        theLetListens = false;
+    }
+
+    if ((sockfd_ = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+    {
         sockfd_ = -1;
         return;
     }
+    struct sockaddr_un servaddr;
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sun_family = AF_UNIX;
+    strncpy(servaddr.sun_path, sockpath.c_str(), sizeof(servaddr.sun_path)-1);
+
     if (theLetListens)
     {
-        struct sockaddr_un servaddr;
-        memset(&servaddr, 0, sizeof(servaddr));
-        servaddr.sun_family = AF_UNIX;
-        strncpy(servaddr.sun_path, sockpath.c_str(), sizeof(servaddr.sun_path)-1);
         unlink(sockpath.c_str());
 
         if (bind(sockfd_, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0)
         {
-            //TODO: Trigger a critical error signal.
+            letOperationalError.Emit(sockfd_, "bind");
             close(sockfd_);
             sockfd_ = -1;
             return;
@@ -36,17 +48,22 @@ xlet::UDSlet::UDSlet(const std::string &sockpath, xlet::Direction direction, boo
 
         if (listen(sockfd_, 1) < 0)
         {
-            //TODO: Trigger a critical error signal.
+            letOperationalError.Emit(sockfd_, "listen");
             close(sockfd_);
             return;
         }
+
         pollfds_.push_back({sockfd_, POLLIN, 0});
         inboundDataHandler = std::function<void()>{[this]() {
+            auto threadId = std::this_thread::get_id();
+            letIsListening.Emit(sockfd_, threadId);
+
             while (true) {
 
                 if(poll(pollfds_.data(), pollfds_.size(), -1) < 0){
-                    //TODO: Trigger a critical error signal.
-                    return 0;
+                    std::string pollError = strerror(errno);
+                    letOperationalError.Emit(sockfd_, pollError);
+                    return;
                 }
 
                 for (auto&fd : pollfds_)
@@ -57,9 +74,10 @@ xlet::UDSlet::UDSlet(const std::string &sockpath, xlet::Direction direction, boo
                         {
                             int connfd = accept(sockfd_, nullptr, nullptr);
                             if (connfd < 0) {
-                                //TODO: Trigger a warning error signal.
+                                letOperationalError.Emit(sockfd_, "accept");
                                 continue;
                             }
+                            letAcceptedANewConnection.Emit(sockfd_,connfd);
                             pollfds_.push_back({connfd, POLLIN, 0});
                         }
                         else
@@ -67,14 +85,14 @@ xlet::UDSlet::UDSlet(const std::string &sockpath, xlet::Direction direction, boo
                             std::vector<std::byte> dataInBlock(XLET_MAXBLOCKSIZE, std::byte{0});
                             ssize_t bytesRead = read(fd.fd, dataInBlock.data(), dataInBlock.size());
                             if (bytesRead <= 0) {
-
-                                //TODO: Trigger connection will be closed.
+                                if (bytesRead) letOperationalError.Emit(fd.fd, strerror(errno));
+                                letWillCloseConnection.Emit(static_cast<uint64_t >(fd.fd));
                                 close (fd.fd);
                                 fd.fd = -1;
                                 continue;
                             }
                             dataInBlock.resize(bytesRead);
-                            //TODO: Trigger a signal that data has been received.
+                            letDataFromConnectionIsReadyToBeRead.Emit(fd.fd, dataInBlock);
                         }
                     }
                 }
@@ -82,13 +100,60 @@ xlet::UDSlet::UDSlet(const std::string &sockpath, xlet::Direction direction, boo
             }
         }};
     }
-
+    else if (direction == xlet::Direction::OUTB || direction == xlet::Direction::INOUTB)
+    {
+        if (connect(sockfd_, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0)
+        {
+            return;
+        }
+        if (direction == xlet::Direction::OUTB)
+        {
+            return;
+        }
+        else
+        {
+            //DIRECTION INOUTB
+            pollfds_.push_back({sockfd_, POLLIN, 0});
+            inboundDataHandler = std::function<void()>{[this]() {
+                while (true) {
+                    if (poll(pollfds_.data(), pollfds_.size(), -1) < 0){
+                        letOperationalError.Emit(sockfd_, strerror(errno));
+                        return;
+                    }
+                    for (auto&fd : pollfds_) {
+                        if (sockfd_ == fd.fd && fd.revents & POLLIN) {
+                            std::vector<std::byte> dataInBlock(XLET_MAXBLOCKSIZE, std::byte{0});
+                            ssize_t bytesRead = read(fd.fd, dataInBlock.data(), dataInBlock.size());
+                            if (bytesRead <= 0) {
+                                letWillCloseConnection.Emit(static_cast<uint64_t>(fd.fd));
+                                close(fd.fd);
+                                fd.fd = -1;
+                                continue;
+                            }
+                            dataInBlock.resize(bytesRead);
+                            letDataFromServiceIsReadyToBeRead.Emit(dataInBlock);
+                        }
+                    }
+                    pollfds_.erase(std::remove_if(pollfds_.begin(), pollfds_.end(), [](auto& fd){return fd.fd < 0;}), pollfds_.end());
+                }
+            }};
+        }
+    }
+}
+std::size_t xlet::UDSlet::pushData(const std::vector<std::byte>& refData){
+    return pushData(static_cast<uint64_t>(sockfd_), refData);
 }
 
-std::size_t xlet::UDSlet::pushData(const std::vector<std::byte>& data) {
+std::size_t xlet::UDSlet::pushData(const uint64_t destId, const std::vector<std::byte>& data){
 
-    if (sockfd_ < 0) {
-        //TODO: Trigger a critical error signal
+    if (direction == xlet::Direction::INB) {
+        letIsIINBOnly.Emit();
+        return 0;
+    }
+
+    int socket = static_cast<int>(destId & 0xFFFFFFFF);
+    if (socket < 0) {
+        letInvalidSocketError.Emit();
         return 0;
     }
 
@@ -97,9 +162,9 @@ std::size_t xlet::UDSlet::pushData(const std::vector<std::byte>& data) {
 
     //write thru socket
     while (dataLen > 0) {
-        ssize_t bytesWritten = write(sockfd_, dataPtr, dataLen);
+        ssize_t bytesWritten = write(socket, dataPtr, dataLen);
         if (bytesWritten < 0) {
-            //TODO: Trigger a critical error signal
+            letOperationalError.Emit(socket, strerror(errno));
             return 0;
         }
         dataPtr += bytesWritten;
@@ -125,4 +190,6 @@ xlet::UDSIn::UDSIn(const std::string &sockpath) : UDSlet(sockpath, xlet::Directi
 /****** UDSInOut ****/
 xlet::UDSInOut::UDSInOut(const std::string &sockpath, bool listen) : UDSlet(sockpath, xlet::Direction::INOUTB, listen)
 {
+
+
 }

@@ -1,13 +1,19 @@
 #ifndef XLET_H
 #define XLET_H
 
+
+
 #include <mutex>
 #include <queue>
 #include <memory>
 #include <thread>
 #include <vector>
 #include <cstddef>
+#include <utility>
+#include <iostream>
 #include <functional>
+
+#include "signalsslots.h"
 
 /* POSIX */
 #include <poll.h>
@@ -22,15 +28,19 @@
 
 // Forward declaration of a template class Queue
 namespace xlet {
+    template <typename T>
+    class Id
+    {
+        inline static uint64_t id__{0};
+     protected:
+        uint64_t id{id__++};
+    };
+    using Data = std::pair<uint64_t, std::vector<std::byte>>;
 
-    class Queue {
-
+    class Queue : public std::queue<Data>{
      public:
-        void push(const std::vector<std::byte> dataOutBlock);
-        bool pop(std::vector<std::byte>& dataInBlock);
-
-     private:
-        std::queue<std::vector<std::byte>> queue_;
+        DAWn::Events::Signal<> dataReady;
+             private:
         std::mutex mutex_;
     };
 
@@ -62,8 +72,22 @@ namespace xlet {
          * @param data
          * @return
          */
+        virtual std::size_t pushData(const uint64_t destId, const std::vector<std::byte>& data) = 0;
         virtual std::size_t pushData(const std::vector<std::byte>& data) = 0;
         void setIncomingDataCallBack(std::function<void(std::vector<std::byte>&)> callback);
+
+
+
+        DAWn::Events::Signal<uint64_t, std::__thread_id>    letIsListening;
+        DAWn::Events::Signal<uint64_t, std::string>         letOperationalError;
+        DAWn::Events::Signal<>                              letInvalidSocketError;
+        DAWn::Events::Signal<>                              letIsIINBOnly;
+
+        DAWn::Events::Signal<uint64_t, uint64_t >   letAcceptedANewConnection;
+        DAWn::Events::Signal<uint64_t>              letWillCloseConnection;
+
+        DAWn::Events::Signal<uint64_t, std::vector<std::byte>&> letDataFromConnectionIsReadyToBeRead;
+        DAWn::Events::Signal<std::vector<std::byte>&>           letDataFromServiceIsReadyToBeRead;
 
 
      protected:
@@ -71,25 +95,25 @@ namespace xlet {
         Direction direction;
 
         std::function<void(std::vector<std::byte>&)> incomingDataCallBack{[](auto& bytes){}};
-
         std::vector<struct pollfd> pollfds_;
+
 
 
     };
 
     class In  {
-     protected:
+     public:
         Queue qin_;
 
     };
 
     class Out  {
-     protected:
+     public:
         Queue qout_;
     };
 
     class InOut  {
-     protected:
+     public:
         Queue qin_;
         Queue qout_;
     };

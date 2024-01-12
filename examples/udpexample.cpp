@@ -67,15 +67,14 @@ void printHexy(std::vector<std::byte>&data, int maxrowsize = 16, int groupsize =
     //go back to original size
     data.resize(originalSize);
 }
-void handleServerIncomingData(uint64_t connId, std::vector<std::byte>& data) {
+void handleServerIncomingData(int connId, std::vector<std::byte>& data) {
     // Process incoming data
     log(connId, "Received data of size: " + std::to_string(data.size()));
     // Additional processing can be done here
     printHexy(data);
 }
 
-
-void serverMainLoop(const std::string& sockpath)
+void runServer(const std::string& sockpath)
 {
     xlet::UDSInOut udsServer(sockpath, true);
 
@@ -83,19 +82,13 @@ void serverMainLoop(const std::string& sockpath)
         std::stringstream ss; ss << "UDS Server is listening on thread: " << id;
         log( sockfd , ss.str());
     });
-    udsServer.letWillCloseConnection.Connect(+[](int connfd){
-        std::stringstream ss; ss << "Closing connection";
-        log( connfd , ss.str());
-    });
-    udsServer.letDataFromConnectionIsReadyToBeRead.Connect(handleServerIncomingData);
-    udsServer.letOperationalError.Connect(+[](int sockfd, const std::string& msg){
-        std::stringstream ss; ss << "Error on socket: " << sockfd << " : " << msg;
+    udsServer.letWillCloseConnection.Connect(+[](int sockfd, int connfd){
+        std::stringstream ss; ss << "Closing connection: " << "[" << connfd << "]";
         log( sockfd , ss.str());
     });
-    udsServer.letAcceptedANewConnection.Connect(+[](int sockfd, int connfd){
-        std::stringstream ss; ss << "Accepted new connection: " << "[" << connfd << "]";
-        log( sockfd , ss.str());
-    });
+
+    udsServer.letDataIsReadyToBeRead.Connect(handleServerIncomingData);
+
     std::thread inboundDataHandlerThread(udsServer.inboundDataHandler);
 
 
@@ -109,9 +102,9 @@ void serverMainLoop(const std::string& sockpath)
     inboundDataHandlerThread.join();
 }
 
-void clientMainLoop(const std::string& sockpath)
+void runClient(const std::string& sockpath)
 {
-    xlet::UDSInOut udsClient(sockpath, false);
+    xlet::UDSOut udsClient(sockpath);
     if (udsClient.valid()) {
         std::cout << "UDS Client is running using socket: " << sockpath << std::endl;
 
@@ -138,11 +131,11 @@ int main(int argc, char**argv)
     std::string mode = argv[1];
     if (mode == "server")
     {
-        serverMainLoop(sockpath);
+        runServer(sockpath);
     }
     else if (mode == "client")
     {
-        clientMainLoop(sockpath);
+        runClient(sockpath);
     }
     else
     {

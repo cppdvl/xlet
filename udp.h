@@ -7,6 +7,7 @@
 class UDPlet : public xlet::Xlet {
     protected:
         struct sockaddr_in  servaddr_;
+        uint64_t            servId_;
         int sockfd_;
 
     public:
@@ -15,6 +16,7 @@ class UDPlet : public xlet::Xlet {
     ~UDPlet() override {}
 
     bool valid() const override {return sockfd_ < 0;}
+    std::size_t pushData(const uint64_t destId, const std::vector<std::byte>& data) override;
     std::size_t pushData(const std::vector<std::byte>& data) override;
     std::function<void()> inboundDataHandler = []()->void{};
 

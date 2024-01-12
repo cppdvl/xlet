@@ -47,10 +47,18 @@ FetchContent_Declare(
     GIT_TAG        patriarchal-master
     )
 FetchContent_MakeAvailable(signal_slots)
+
+FetchContent_Declare(
+        dotenv-cpp
+        GIT_REPOSITORY git@github.com:laserpants/dotenv-cpp.git
+        GIT_TAG        master
+)
+FetchContent_MakeAvailable(dotenv-cpp)
+
 # Include directories
 include_directories(${uvgrtp_SOURCE_DIR}/include)
 include_directories(${nlohmann_json_SOURCE_DIR}/include)
-include_directories(${signal_slots_SOURCE_DIR}/include)
+include_directories(${signal_slots_SOURCE_DIR})
 
 # Define your library or executable target
 add_library(xletlib STATIC
@@ -120,4 +128,14 @@ target_include_directories(udsexample
 target_link_libraries(udsexample
     PRIVATE
         xletlib)
+
+add_executable(udpexample
+    examples/udpexample.cpp)
+target_include_directories(udpexample
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(udpexample
+    PRIVATE
+        xletlib)
+
 
