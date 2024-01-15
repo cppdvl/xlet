@@ -100,7 +100,8 @@ xlet::UDPlet::UDPlet(
             sockfd_ = -1;
             return;
         }
-        inboundDataHandler = std::function<void()>{[this](){
+
+        inboundDataHandlerThread = std::function<void()>{[this](){
 
             letBindedOn.Emit(servId_, std::this_thread::get_id());
 
@@ -117,12 +118,11 @@ xlet::UDPlet::UDPlet(
                 inDataBuffer.resize(bytesReceived);
                 letDataFromConnectionIsReadyToBeRead.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
             }
-
         }};
     }
     else
     {
-        inboundDataHandler = std::function<void()>{[this](){
+        inboundDataHandlerThread = std::function<void()>{[this](){
             while(true) {
                 std::vector<std::byte> inDataBuffer(XLET_MAXBLOCKSIZE, std::byte{0});
                 int bytesReceived = 0;
@@ -134,7 +134,6 @@ xlet::UDPlet::UDPlet(
                 inDataBuffer.resize(bytesReceived);
                 letDataFromServiceIsReadyToBeRead.Emit(inDataBuffer);
             }
-
         }};
     }
 }
@@ -158,11 +157,24 @@ std::size_t xlet::UDPlet::pushData(const uint64_t peerId,  const std::vector<std
         }
         bytesSent += bytesSentNow;
     }
-    if (bytesSent != data.size()) {
-        //Trigger a Critical Warning signal.
-    }
     return bytesSent;
 }
+
+void xlet::UDPlet::setOutboundDataCallBack(std::function<void()>& callback)
+{
+    outboundDataHandlerThread = callback;
+}
+
+void xlet::UDPlet::EnableQueueManagement()
+{
+    queueManaged = true;
+
+}
+void xlet::UDPlet::DisableQueueManagement()
+{
+    queueManaged = false;
+}
+
 /********************/
 /****** UDPOut ******/
 xlet::UDPOut::UDPOut(const std::string ipstring, int port) : UDPlet(ipstring, port, xlet::Direction::OUTB, false)
@@ -172,11 +184,27 @@ xlet::UDPOut::UDPOut(const std::string ipstring, int port) : UDPlet(ipstring, po
 /******** UDPIn ******/
 xlet::UDPIn::UDPIn(const std::string ipstring, int port) : UDPlet(ipstring, port, xlet::Direction::INB, true)
 {
+    inQSlot = letDataFromConnectionIsReadyToBeRead.Connect(std::function<void(uint64_t, std::vector<std::byte>&)>{
+        [this](uint64_t peerId, std::vector<std::byte>& data){
+            if (queueManaged){
+                xlet::Data dataBind(peerId, data);
+                qin_.push(dataBind);
+            }
+        }
+    });
 }
 /********************/
 /****** UDPInOut *****/
 xlet::UDPInOut::UDPInOut(const std::string ipstring, int port, bool listen) : UDPlet(ipstring, port, xlet::Direction::INOUTB, listen)
 {
+    inQSlot = letDataFromConnectionIsReadyToBeRead.Connect(std::function<void(uint64_t, std::vector<std::byte>&)>{
+        [this](uint64_t peerId, std::vector<std::byte>& data){
+            if (queueManaged){
+                xlet::Data dataBind(peerId, data);
+                qin_.push(dataBind);
+            }
+        }
+    });
 }
 
 

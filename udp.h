@@ -8,8 +8,9 @@ class UDPlet : public xlet::Xlet {
  protected:
     struct sockaddr_in  servaddr_;
     uint64_t            servId_;
-    int sockfd_;
-
+    int                 sockfd_;
+    bool                queueManaged{false};
+    size_t              inQSlot{};
  public:
     UDPlet(const std::string address, int port, xlet::Direction direction = xlet::Direction::INOUTB, bool theLetListens = false);
     ~UDPlet() override {}
@@ -17,11 +18,23 @@ class UDPlet : public xlet::Xlet {
     bool valid() const override {return sockfd_ >= 0;}
     std::size_t pushData(const uint64_t destId, const std::vector<std::byte>& data) override;
     std::size_t pushData(const std::vector<std::byte>& data) override;
-    std::function<void()> inboundDataHandler = []()->void{};
+    std::function<void()> inboundDataHandlerThread = []()->void{
+        std::cout << "NO INBOUND DATA HANDLER!" << std::endl;
+    };
+    std::function<void()> outboundDataHandlerThread = []()->void{
+        std::cout << "NO OUTBOUND DATA HANDLER!" << std::endl;
+    };
 
     DAWn::Events::Signal<uint64_t, std::vector<std::byte>&>&    letDataFromPeerReady{letDataFromConnectionIsReadyToBeRead};
     DAWn::Events::Signal<uint64_t, std::__thread_id>            letBindedOn;
 
+    //Set outbound
+    void setOutboundDataCallBack(std::function<void()>& callback);
+
+    //Queue managed inbound Data
+    void enableQueueManagement();
+    void disableQueueManagement();
+    //Static Helpers
     static struct sockaddr_in toSystemSockAddr(std::string ipstring, int port);
     static uint64_t sockAddrPortToUInt64(struct sockaddr_in& addr);
     static uint64_t sockAddToPeerId(struct sockaddr_in& sockAddr);
@@ -30,9 +43,6 @@ class UDPlet : public xlet::Xlet {
     static std::string letIdToIpString(uint64_t peerId);
     static std::string letIdToString(uint64_t peerId);
     static int peerIdToPort(uint64_t peerId);
-
-
-
 
 };
 

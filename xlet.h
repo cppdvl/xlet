@@ -92,7 +92,6 @@ namespace xlet {
         DAWn::Events::Signal<uint64_t, std::vector<std::byte>&> letDataFromConnectionIsReadyToBeRead;
         DAWn::Events::Signal<std::vector<std::byte>&>           letDataFromServiceIsReadyToBeRead;
 
-
      protected:
         Transport transport;
         Direction direction;
@@ -128,9 +127,9 @@ namespace xlet {
 
     struct Configuration
     {
-        Transport   transport{Transport::UDS};
-        Direction   direction{Direction::INOUTB};
         std::string     address{"/tmp/tmpUDSserver"};
+        Transport       transport{Transport::UDS};
+        Direction       direction{Direction::INOUTB};
         std::string&    sockpath{address};
         int             port0{0};
         int             port1{0};

@@ -138,4 +138,12 @@ target_link_libraries(udpexample
     PRIVATE
         xletlib)
 
+add_executable(relayrouter
+        router/relayrouter.cpp)
+target_include_directories(relayrouter
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(relayrouter
+    PRIVATE
+        xletlib)
 

@@ -2,9 +2,16 @@
 // Created by Julian Guarin on 10/01/24.
 //
 #include "xlet.h"
+#include <set>
+#include <queue>
 #include <iomanip>
 #include <sstream>
 
+
+std::set<uint64_t> connectedClients{};
+
+//Top of the queue is the host.
+std::queue<uint64_t> orderToHost{};
 
 
 
@@ -77,7 +84,16 @@ void handleServerIncomingData(uint64_t peerId, std::vector<std::byte>& data) {
     printHexy(data);
 }
 
-void runServer(const std::string& ip, int port)
+void newConnection(uint64_t peerId)
+{
+    log(xlet::UDPlet::letIdToIpString(peerId), "New connection");
+
+    if (!connectedClients.empty() || !orderToHost.empty()) connectedClients.insert(peerId);
+    orderToHost.push(peerId);
+}
+
+
+void runServerRouting(const std::string& ip, int port)
 {
     xlet::UDPInOut udpServer(ip, 8899, true);
 
@@ -85,56 +101,48 @@ void runServer(const std::string& ip, int port)
         std::stringstream ss; ss << "UDP Server binded and waiting for data on thread: " << id;
         log(xlet::UDPlet::letIdToString(letId) , ss.str());
     });
+    udpServer.enableQueueManagement();
+    auto qThread = std::function<void()>([&udpServer](){
+        while(true) {
 
-    udpServer.letDataFromPeerReady.Connect(handleServerIncomingData);
+            if (udpServer.qin_.size() > 0) {
+
+                //If Check peer is in connectedClients.
+                auto peerIdData = udpServer.qin_.front();
+                udpServer.qin_.pop();
+
+                //Get peerId
+                auto peerId = peerIdData.first;
+
+                //Check if it's a new connection. If so, add it to the connectedClients set.
+                if (connectedClients.find(peerId) == connectedClients.end()) newConnection(peerId);
+                auto hostId = orderToHost.front();
+
+                //Broadcast to all connected clients
+                if (hostId == peerId) for (auto& client : connectedClients)  udpServer.pushData(client, peerIdData.second);
+                //Route data to host.
+                else udpServer.pushData(hostId, peerIdData.second);
+            }
+        }
+    });
+
     std::thread inboundDataHandlerThread(udpServer.inboundDataHandlerThread);
+    std::thread routerThread(qThread);
 
     if (udpServer.valid()) {
         std::cout << "UDP Server is running using socket: " << ip << std::endl;
     } else {
         std::cerr << "Failed to initialize UDP Server" << std::endl;
     }
+
     inboundDataHandlerThread.join();
+
 }
 
-void runClient(const std::string& ip, int port)
-{
-    xlet::UDPOut udpClient(ip, 8899); //This will point to the server.
-    if (udpClient.valid()) {
-        std::cout << "UDP Client is running"<< std::endl;
-
-        std::string s("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
-        std::vector<std::byte> data{};
-        for (auto& c : s)
-        {
-            data.push_back(std::byte(c));
-        }
-        udpClient.pushData(data);
-    } else {
-        std::cerr << "Failed to initialize UDP Client" << std::endl;
-    }
-}
 int main(int argc, char**argv)
 {
 
-    if (argc != 2)
-    {
-        std::cerr << "Usage: " << argv[0] << " <server|client>" << std::endl;
-        return 1;
-    }
-    std::string mode = argv[1];
-    if (mode == "server")
-    {
-        runServer("127.0.0.1", 8899);
-    }
-    else if (mode == "client")
-    {
-        runClient("127.0.0.1", 8899);
-    }
-    else
-    {
-        std::cerr << "Usage: " << argv[0] << " <server|client>" << std::endl;
-        return 1;
-    }
+    runServerRouting("127.0.0.1", 8899);
     return 0;
+
 }
