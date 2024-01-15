@@ -5,9 +5,13 @@
 #include <iomanip>
 #include <sstream>
 
-void log(int id, const std::string& msg)
+
+
+
+
+void log(std::string letId, const std::string& msg)
 {
-    std::cout << " [" << id << "] : " << msg << std::endl;
+    std::cout << "[ " << letId << " ] : " << msg << std::endl;
 }
 
 void printHexy(std::vector<std::byte>&data, int maxrowsize = 16, int groupsize = 4)
@@ -67,46 +71,37 @@ void printHexy(std::vector<std::byte>&data, int maxrowsize = 16, int groupsize =
     //go back to original size
     data.resize(originalSize);
 }
-void handleServerIncomingData(int connId, std::vector<std::byte>& data) {
+void handleServerIncomingData(uint64_t letId, std::vector<std::byte>& data) {
     // Process incoming data
-    log(connId, "Received data of size: " + std::to_string(data.size()));
-    // Additional processing can be done here
+    log(xlet::UDPlet::letIdToIpString(letId), "Received data of size: " + std::to_string(data.size()));
     printHexy(data);
 }
 
-void runServer(const std::string& sockpath)
+void runServer(const std::string& ip, int port)
 {
-    xlet::UDSInOut udsServer(sockpath, true);
+    xlet::UDPInOut udpServer(ip, 8899, true);
 
-    udsServer.letIsListening.Connect(+[](int sockfd, std::__thread_id id){
-        std::stringstream ss; ss << "UDS Server is listening on thread: " << id;
-        log( sockfd , ss.str());
-    });
-    udsServer.letWillCloseConnection.Connect(+[](int sockfd, int connfd){
-        std::stringstream ss; ss << "Closing connection: " << "[" << connfd << "]";
-        log( sockfd , ss.str());
+    udpServer.letBindedOn.Connect(+[](uint64_t letId, std::__thread_id id){
+        std::stringstream ss; ss << "UDP Server binded and waiting for data on thread: " << id;
+        log(xlet::UDPlet::letIdToString(letId) , ss.str());
     });
 
-    udsServer.letDataIsReadyToBeRead.Connect(handleServerIncomingData);
+    udpServer.letDataFromPeerReady.Connect(handleServerIncomingData);
+    std::thread inboundDataHandlerThread(udpServer.inboundDataHandler);
 
-    std::thread inboundDataHandlerThread(udsServer.inboundDataHandler);
-
-
-    if (udsServer.valid()) {
-        std::cout << "UDS Server is running using socket: " << sockpath << std::endl;
-        // Server's main loop goes here
+    if (udpServer.valid()) {
+        std::cout << "UDP Server is running using socket: " << ip << std::endl;
     } else {
-        std::cerr << "Failed to initialize UDS Server" << std::endl;
+        std::cerr << "Failed to initialize UDP Server" << std::endl;
     }
-
     inboundDataHandlerThread.join();
 }
 
-void runClient(const std::string& sockpath)
+void runClient(const std::string& ip, int port)
 {
-    xlet::UDSOut udsClient(sockpath);
-    if (udsClient.valid()) {
-        std::cout << "UDS Client is running using socket: " << sockpath << std::endl;
+    xlet::UDPOut updClient(ip, 8899); //This will point to the server.
+    if (updClient.valid()) {
+        std::cout << "UDP Client is running"<< std::endl;
 
         std::string s("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
         std::vector<std::byte> data{};
@@ -114,14 +109,13 @@ void runClient(const std::string& sockpath)
         {
             data.push_back(std::byte(c));
         }
-        udsClient.pushData(data);
+        updClient.pushData(data);
     } else {
-        std::cerr << "Failed to initialize UDS Client" << std::endl;
+        std::cerr << "Failed to initialize UDP Client" << std::endl;
     }
 }
 int main(int argc, char**argv)
 {
-    std::string sockpath = "/tmp/uds_socket";
 
     if (argc != 2)
     {
@@ -131,11 +125,11 @@ int main(int argc, char**argv)
     std::string mode = argv[1];
     if (mode == "server")
     {
-        runServer(sockpath);
+        runServer("127.0.0.1", 8899);
     }
     else if (mode == "client")
     {
-        runClient(sockpath);
+        runClient("127.0.0.1", 8899);
     }
     else
     {

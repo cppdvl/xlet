@@ -1,9 +1,8 @@
 #include "xlet.h"
 #include <arpa/inet.h>
 
-namespace UDPUtilities
-{
-    struct sockaddr_in toSystemSockAddr(std::string ip, int port)
+
+    struct sockaddr_in xlet::UDPlet::toSystemSockAddr(std::string ip, int port)
     {
         struct sockaddr_in addr;
         addr.sin_family = AF_INET;
@@ -14,33 +13,55 @@ namespace UDPUtilities
         return addr;
     }
 
-    uint64_t sockAddrIpToUInt64(struct sockaddr_in& addr)
+    uint64_t xlet::UDPlet::sockAddrIpToUInt64(struct sockaddr_in& addr)
     {
         uint64_t ip = *reinterpret_cast<uint32_t*>(&addr.sin_addr.s_addr);
         ip          <<= 32;
         return ip;
     }
 
-    uint64_t sockAddrPortToUInt64(struct sockaddr_in& addr)
+    uint64_t xlet::UDPlet::sockAddrPortToUInt64(struct sockaddr_in& addr)
     {
         return static_cast<uint64_t>(ntohs(addr.sin_port));
     }
 
-    uint64_t sockAddToPeerId(struct sockaddr_in& addr)
+    uint64_t xlet::UDPlet::sockAddToPeerId(struct sockaddr_in& addr)
     {
         return sockAddrIpToUInt64(addr) | sockAddrPortToUInt64(addr);
     }
 
-    struct sockaddr_in peerIdToSockAddr(uint64_t peerId)
+    struct sockaddr_in xlet::UDPlet::peerIdToSockAddr(uint64_t peerId)
     {
         struct sockaddr_in addr;
         addr.sin_family = AF_INET;
         addr.sin_port = htons(static_cast<uint32_t>(peerId & 0xFFFF));
-        addr.sin_addr.s_addr = htonl(peerId >> 32);
+        auto ipString = letIdToIpString(peerId);
+        addr.sin_addr.s_addr = inet_addr(ipString.c_str());
         return addr;
     }
 
-}
+    std::string xlet::UDPlet::letIdToString(uint64_t peerId)
+    {
+        std::stringstream ss; ss << letIdToIpString(peerId);
+        ss << ":" << peerIdToPort(peerId);
+        return ss.str();
+    }
+
+    int xlet::UDPlet::peerIdToPort(uint64_t peerId)
+    {
+        return static_cast<uint32_t>(peerId & 0xFFFF);
+    }
+
+    std::string xlet::UDPlet::letIdToIpString(uint64_t peerId)
+    {
+        std::stringstream ss;
+        ss << (((peerId >> 32) >> 0x00) & 0xFF) << ".";
+        ss << (((peerId >> 32) >> 0x08) & 0xFF) << ".";
+        ss << (((peerId >> 32) >> 0x10) & 0xFF) << ".";
+        ss << (((peerId >> 32) >> 0x18) & 0xFF);
+        return ss.str();
+    }
+
 
 
 
@@ -52,8 +73,8 @@ xlet::UDPlet::UDPlet(
 )
 {
     this->direction = direction;
-    servaddr_       = UDPUtilities::toSystemSockAddr(ipstring, port);
-    servId_         = UDPUtilities::sockAddToPeerId(servaddr_);
+    servaddr_       = toSystemSockAddr(ipstring, port);
+    servId_         = sockAddToPeerId(servaddr_);
 
     if ( direction == xlet::Direction::INB && theLetListens == false)
     {
@@ -79,8 +100,9 @@ xlet::UDPlet::UDPlet(
             sockfd_ = -1;
             return;
         }
-
         inboundDataHandler = std::function<void()>{[this](){
+
+            letBindedOn.Emit(servId_, std::this_thread::get_id());
 
             struct sockaddr_in cliaddr;
             socklen_t len = sizeof(cliaddr);
@@ -93,7 +115,7 @@ xlet::UDPlet::UDPlet(
                 }
 
                 inDataBuffer.resize(bytesReceived);
-                letDataFromConnectionIsReadyToBeRead.Emit(UDPUtilities::sockAddToPeerId(cliaddr), inDataBuffer);
+                letDataFromConnectionIsReadyToBeRead.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
             }
 
         }};
@@ -126,7 +148,7 @@ std::size_t xlet::UDPlet::pushData(const uint64_t peerId,  const std::vector<std
         return 0;
     }
 
-    auto addr = UDPUtilities::peerIdToSockAddr(peerId);
+    auto addr = peerIdToSockAddr(peerId);
     auto bytesSent = static_cast<size_t>(0);
     while (bytesSent < data.size()) {
         auto bytesSentNow = sendto(sockfd_, data.data() + bytesSent, data.size() - bytesSent, 0, (struct sockaddr *) &addr, sizeof(addr));

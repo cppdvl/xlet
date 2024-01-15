@@ -79,11 +79,11 @@ void serverMainLoop(const std::string& sockpath)
 {
     xlet::UDSInOut udsServer(sockpath, true);
 
-    udsServer.letIsListening.Connect(+[](int sockfd, std::__thread_id id){
+    udsServer.letIsListening.Connect(+[](uint64_t sockfd, std::__thread_id id){
         std::stringstream ss; ss << "UDS Server is listening on thread: " << id;
         log( sockfd , ss.str());
     });
-    udsServer.letWillCloseConnection.Connect(+[](int connfd){
+    udsServer.letWillCloseConnection.Connect(+[](uint64_t connfd){
         std::stringstream ss; ss << "Closing connection";
         log( connfd , ss.str());
     });
@@ -92,7 +92,7 @@ void serverMainLoop(const std::string& sockpath)
         std::stringstream ss; ss << "Error on socket: " << sockfd << " : " << msg;
         log( sockfd , ss.str());
     });
-    udsServer.letAcceptedANewConnection.Connect(+[](int sockfd, int connfd){
+    udsServer.letAcceptedANewConnection.Connect(+[](uint64_t sockfd, int connfd){
         std::stringstream ss; ss << "Accepted new connection: " << "[" << connfd << "]";
         log( sockfd , ss.str());
     });
