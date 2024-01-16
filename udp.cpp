@@ -90,6 +90,7 @@ xlet::UDPlet::UDPlet(
         sockfd_ = -1;
         return;
     }
+    fcntl(sockfd_, F_SETFL, O_NONBLOCK);
 
     if (theLetListens)
     {
@@ -130,7 +131,6 @@ xlet::UDPlet::UDPlet(
                     letOperationalError.Emit(sockfd_, "recvfrom");
                     continue;
                 }
-
                 inDataBuffer.resize(bytesReceived);
                 letDataFromServiceIsReadyToBeRead.Emit(inDataBuffer);
             }
@@ -165,12 +165,12 @@ void xlet::UDPlet::setOutboundDataCallBack(std::function<void()>& callback)
     outboundDataHandlerThread = callback;
 }
 
-void xlet::UDPlet::EnableQueueManagement()
+void xlet::UDPlet::enableQueueManagement()
 {
     queueManaged = true;
 
 }
-void xlet::UDPlet::DisableQueueManagement()
+void xlet::UDPlet::disableQueueManagement()
 {
     queueManaged = false;
 }
@@ -184,7 +184,7 @@ xlet::UDPOut::UDPOut(const std::string ipstring, int port) : UDPlet(ipstring, po
 /******** UDPIn ******/
 xlet::UDPIn::UDPIn(const std::string ipstring, int port) : UDPlet(ipstring, port, xlet::Direction::INB, true)
 {
-    inQSlot = letDataFromConnectionIsReadyToBeRead.Connect(std::function<void(uint64_t, std::vector<std::byte>&)>{
+    letDataFromConnectionIsReadyToBeRead.Connect(std::function<void(uint64_t, std::vector<std::byte>&)>{
         [this](uint64_t peerId, std::vector<std::byte>& data){
             if (queueManaged){
                 xlet::Data dataBind(peerId, data);
@@ -197,7 +197,7 @@ xlet::UDPIn::UDPIn(const std::string ipstring, int port) : UDPlet(ipstring, port
 /****** UDPInOut *****/
 xlet::UDPInOut::UDPInOut(const std::string ipstring, int port, bool listen) : UDPlet(ipstring, port, xlet::Direction::INOUTB, listen)
 {
-    inQSlot = letDataFromConnectionIsReadyToBeRead.Connect(std::function<void(uint64_t, std::vector<std::byte>&)>{
+    letDataFromConnectionIsReadyToBeRead.Connect(std::function<void(uint64_t, std::vector<std::byte>&)>{
         [this](uint64_t peerId, std::vector<std::byte>& data){
             if (queueManaged){
                 xlet::Data dataBind(peerId, data);

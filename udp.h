@@ -10,7 +10,6 @@ class UDPlet : public xlet::Xlet {
     uint64_t            servId_;
     int                 sockfd_;
     bool                queueManaged{false};
-    size_t              inQSlot{};
  public:
     UDPlet(const std::string address, int port, xlet::Direction direction = xlet::Direction::INOUTB, bool theLetListens = false);
     ~UDPlet() override {}
