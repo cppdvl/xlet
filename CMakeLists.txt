@@ -35,13 +35,6 @@ endif()
 
 # Fetch nlohmann_json
 FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        v3.10.5  # Replace with the desired version
-)
-FetchContent_MakeAvailable(nlohmann_json)
-
-FetchContent_Declare(
     signal_slots
     GIT_REPOSITORY https://github.com/cppdvl/signal_n_slots.git
     GIT_TAG        patriarchal-master
@@ -57,7 +50,6 @@ FetchContent_MakeAvailable(dotenv-cpp)
 
 # Include directories
 include_directories(${uvgrtp_SOURCE_DIR}/include)
-include_directories(${nlohmann_json_SOURCE_DIR}/include)
 include_directories(${signal_slots_SOURCE_DIR})
 
 # Define your library or executable target
@@ -74,48 +66,6 @@ add_library(xletlib STATIC
 target_link_libraries(xletlib
     PRIVATE
         uvgrtp
-        nlohmann_json
-)
-
-# Let's add a udp server as example.
-add_executable(udpserver
-    server.cpp
-)
-
-target_link_libraries(udpserver
-    PRIVATE
-        xletlib
-)
-
-# Let's add a udp client as example.
-add_executable(udpclient
-    client.cpp
-)
-target_link_libraries(udpclient
-    PRIVATE
-        xletlib
-)
-
-add_executable(udsclient
-        examples/udsclient.cpp
-)
-target_include_directories(udsclient
-        PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-)
-target_link_libraries(udsclient
-    PRIVATE
-        xletlib
-)
-
-add_executable(udsserver
-    examples/udsserver.cpp)
-target_include_directories(udsserver
-        PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(udsserver
-    PRIVATE
-        xletlib
 )
 
 add_executable(udsexample
