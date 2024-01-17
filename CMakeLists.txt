@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
+
 # Set the default build type to Debug if none was specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
@@ -89,7 +90,9 @@ target_link_libraries(udpexample
         xletlib)
 
 add_executable(relayrouter
-        examples/relayrouter.cpp)
+        examples/relayrouter.cpp
+        router/relayrouter.cpp
+        router/relayrouter.h)
 target_include_directories(relayrouter
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR})

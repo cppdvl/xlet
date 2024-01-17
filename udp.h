@@ -17,18 +17,26 @@ class UDPlet : public xlet::Xlet {
     bool valid() const override {return sockfd_ >= 0;}
     std::size_t pushData(const uint64_t destId, const std::vector<std::byte>& data) override;
     std::size_t pushData(const std::vector<std::byte>& data) override;
-    std::function<void()> inboundDataHandlerThread = []()->void{
-        std::cout << "NO INBOUND DATA HANDLER!" << std::endl;
-    };
-    std::function<void()> outboundDataHandlerThread = []()->void{
-        std::cout << "NO OUTBOUND DATA HANDLER!" << std::endl;
-    };
 
-    DAWn::Events::Signal<uint64_t, std::vector<std::byte>&>&    letDataFromPeerReady{letDataFromConnectionIsReadyToBeRead};
-    DAWn::Events::Signal<uint64_t, std::__thread_id>            letBindedOn;
+    DAWn::Events::Signal<uint64_t>                                      letThreadStarted;
+    DAWn::Events::Signal<const std::string, std::vector<std::byte>&>    letDataReadyToBeTransmitted;
+    DAWn::Events::Signal<xlet::Data>                                    letDataFromServiceIsReadyToBeRead;
+    DAWn::Events::Signal<uint64_t, std::vector<std::byte>&>&            letDataFromPeerReady{letDataFromConnectionIsReadyToBeRead};
+    DAWn::Events::Signal<uint64_t, std::__thread_id>                    letBindedOn;
 
-    //Set outbound
-    void setOutboundDataCallBack(std::function<void()>& callback);
+    //Use only if needed
+    std::thread qThread;
+    std::thread recvThread;
+    bool        qPause = true;
+    std::thread inboundDataHandlerThread;
+
+    inline void run()
+    {
+        qPause = false;
+    }
+    virtual void join() = 0;
+
+
 
     //Queue managed inbound Data
     void enableQueueManagement();
@@ -51,22 +59,25 @@ class UDPlet : public xlet::Xlet {
 class UDPOut : public UDPlet, public xlet::Out {
 
  public:
-    UDPOut(const std::string address, int port);
-    ~UDPOut() override {}
+    UDPOut(const std::string address, int port, bool qSynced = false);
+    ~UDPOut() override { close (sockfd_);}
+    virtual void join() override;
 };
 
 class UDPIn : public UDPlet, public xlet::In {
 
  public:
-    UDPIn(const std::string address, int port);
-    ~UDPIn() override {}
+    UDPIn(const std::string address, int port, bool qSynced = false);
+    ~UDPIn() override {close (sockfd_);}
+    virtual void join() override;
 
 };
 
-class UDPInOut : public UDPlet, public xlet::In {
+class UDPInOut : public UDPlet, public xlet::InOut {
  public:
-    UDPInOut(const std::string address, int port, bool listen = false);
-    ~UDPInOut() override {}
+    UDPInOut(const std::string address, int port, bool listen = false, bool qSynced = false);
+    ~UDPInOut() override {close (sockfd_);}
+    virtual void join() override;
 
 };
 
