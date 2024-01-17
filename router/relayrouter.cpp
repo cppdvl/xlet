@@ -29,7 +29,7 @@ xlet::UDPInOut* CreateRouter (int port)
     ptrRouter->letOperationalError.Connect(std::function<void(uint64_t, std::string)>{[](uint64_t peerId, std::string error) {
         std::cout << peerId << " " << error << std::endl;
     }});
-    ptrRouter->letBindedOn.Connect(std::function<void(uint64_t, std::__thread_id)>{[](uint64_t peerId, std::__thread_id threadId) {
+    ptrRouter->letBindedOn.Connect(std::function<void(uint64_t, std::thread::id)>{[](uint64_t peerId, std::thread::id threadId) {
         std::cout << peerId << " " << threadId << std::endl;
     }});
     ptrRouter->letThreadStarted.Connect(std::function<void(uint64_t)>{[](uint64_t peerId) {
