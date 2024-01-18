@@ -3,11 +3,11 @@
 //
 #include "xlet.h"
 
-xlet::UDPInOut* CreateRouter (int port);
+xlet::UDPInOut* CreateRouter (std::string ip, int port, bool listen, bool synced);
 
 int main(int argc, char**argv)
 {
-    auto router = CreateRouter(8899);
+    auto router = CreateRouter("0.0.0.0", 8899, true, true);
     if (router)
     {
         router->run();

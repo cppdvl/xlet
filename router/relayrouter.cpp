@@ -17,9 +17,9 @@ bool isAuthorizedPeer(uint64_t peerId)
 }
 
 
-xlet::UDPInOut* CreateRouter (int port)
+xlet::UDPInOut* CreateRouter (std::string ip, int port, bool listen, bool synced)
 {
-    auto ptrRouter = new xlet::UDPInOut("0.0.0.0", port, true, true);
+    auto ptrRouter = new xlet::UDPInOut(ip, port, listen, synced);
     if (!ptrRouter) return nullptr;
     if (ptrRouter->valid() == false)
     {
