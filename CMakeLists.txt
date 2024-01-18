@@ -61,8 +61,13 @@ add_library(xletlib STATIC
     xlet.cpp
     udp.cpp
     uds.cpp
+    router/relayrouter.cpp
+
 )
 
+target_include_directories(xletlib
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR})
 # Link libraries
 target_link_libraries(xletlib
     PRIVATE
@@ -90,9 +95,7 @@ target_link_libraries(udpexample
         xletlib)]]
 
 add_executable(relayrouter
-        examples/relayrouter.cpp
-        router/relayrouter.cpp
-        router/relayrouter.h)
+        examples/relayrouter.cpp)
 target_include_directories(relayrouter
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR})
