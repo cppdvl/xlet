@@ -51,6 +51,8 @@ class UDPlet : public xlet::Xlet {
     static std::string letIdToString(uint64_t peerId);
     static int peerIdToPort(uint64_t peerId);
 
+    int getSocket() const {return sockfd_;}
+
 };
 
 
