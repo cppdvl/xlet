@@ -92,7 +92,7 @@ xlet::UDSlet::UDSlet(
                                 continue;
                             }
                             dataInBlock.resize(bytesRead);
-                            letDataFromConnectionIsReadyToBeRead.Emit(fd.fd, dataInBlock);
+                            letDataFromPeerReady.Emit(fd.fd, dataInBlock);
                         }
                     }
                 }
@@ -131,7 +131,7 @@ xlet::UDSlet::UDSlet(
                                 continue;
                             }
                             dataInBlock.resize(bytesRead);
-                            letDataFromServiceIsReadyToBeRead.Emit(dataInBlock);
+                            letDataFromPeerIsReady.Emit(0, dataInBlock);
                         }
                     }
                     pollfds_.erase(std::remove_if(pollfds_.begin(), pollfds_.end(), [](auto& fd){return fd.fd < 0;}), pollfds_.end());

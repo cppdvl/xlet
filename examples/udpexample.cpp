@@ -87,14 +87,14 @@ void runServer(const std::string& ip, int port)
     });
 
     udpServer.letDataFromPeerReady.Connect(handleServerIncomingData);
-    std::thread inboundDataHandlerThread(udpServer.inboundDataHandlerFunc);
+    //std::thread inboundDataHandlerThread(udpServer.inboundDataHandlerFunc);
 
     if (udpServer.valid()) {
         std::cout << "UDP Server is running using socket: " << ip << std::endl;
     } else {
         std::cerr << "Failed to initialize UDP Server" << std::endl;
     }
-    inboundDataHandlerThread.join();
+    //inboundDataHandlerThread.join();
 }
 
 void runClient(const std::string& ip, int port)

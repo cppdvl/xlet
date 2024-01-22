@@ -67,7 +67,7 @@ namespace xlet {
      public:
 
         // Virtual destructor for proper cleanup in derived classes
-        Xlet(){};
+        Xlet(){}
         virtual ~Xlet() = default;
         virtual bool valid () const {return false;}
 
@@ -90,14 +90,13 @@ namespace xlet {
         DAWn::Events::Signal<uint64_t, uint64_t >   letAcceptedANewConnection;
         DAWn::Events::Signal<uint64_t>              letWillCloseConnection;
 
-        DAWn::Events::Signal<uint64_t, std::vector<std::byte>&> letDataFromConnectionIsReadyToBeRead;
-        DAWn::Events::Signal<std::vector<std::byte>&>           letDataFromServiceIsReadyToBeRead;
+        DAWn::Events::Signal<uint64_t, std::vector<std::byte>&> letDataFromPeerIsReady;
 
      protected:
         Transport transport;
         Direction direction;
 
-        std::function<void(std::vector<std::byte>&)> incomingDataCallBack{[](auto& bytes){}};
+        std::function<void(std::vector<std::byte>&)> incomingDataCallBack{[](auto&){}};
         std::vector<struct pollfd> pollfds_;
 
 

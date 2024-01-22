@@ -16,5 +16,4 @@ int main(int argc, char**argv)
     }
     delete router;
     return 0;
-
 }

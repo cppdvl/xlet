@@ -18,7 +18,7 @@ class UDSlet : public xlet::Xlet {
        );
         void configure();
         void start();
-        virtual ~UDSlet() override{};
+        virtual ~UDSlet() override{}
 
         bool valid() const override {  return sockfd_ >= 0; }
         std::size_t pushData(const uint64_t, const std::vector<std::byte>&) override;
@@ -26,13 +26,14 @@ class UDSlet : public xlet::Xlet {
         std::function<void()> inboundDataHandler = []()->void{};
         DAWn::Events::Signal<> inboundDataReady;
 
+        DAWn::Events::Signal<uint64_t, std::vector<std::byte>&> letDataFromPeerReady;
 };
 
 class UDSOut : public UDSlet, public xlet::Out
 {
     public:
         UDSOut(const std::string& sockpath);
-        ~UDSOut(){};
+        ~UDSOut(){}
 };
 
 
@@ -40,7 +41,7 @@ class UDSIn : public UDSlet, public xlet::In
 {
     public:
         UDSIn(const std::string& sockpath);
-        ~UDSIn(){};
+        ~UDSIn(){}
 
 
 };
@@ -49,6 +50,6 @@ class UDSInOut : public UDSlet, public xlet::InOut
 {
     public:
         UDSInOut(const std::string& sockpath, bool listen = false);
-        ~UDSInOut(){};
+        ~UDSInOut(){}
 };
 #endif // __UDSSERVER_H__

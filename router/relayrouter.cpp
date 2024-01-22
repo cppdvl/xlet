@@ -10,6 +10,7 @@ static uint64_t             hostingPeerId{0};
 static bool                 requiredAuth{true};
 DAWn::Events::Signal<uint64_t>  nonAuthorizedPeerAttemptedAConnection;
 static std::set<uint64_t>   attemptedPeers{};
+
 bool isAuthorizedPeer(uint64_t peerId)
 {
     return (!requiredAuth) || (authorizedPeers.find(peerId) != authorizedPeers.end());
@@ -42,7 +43,7 @@ xlet::UDPInOut* CreateRouter (std::string ip, int port, bool listen, bool synced
         }
     }});
 
-    ptrRouter->letDataFromConnectionIsReadyToBeRead.Connect(
+    ptrRouter->letDataFromPeerIsReady.Connect(
     std::function<void(uint64_t, std::vector<std::byte>&)>{
         [ptrRouter](uint64_t peerId, std::vector<std::byte>& data){
             if (!isAuthorizedPeer(peerId)) {

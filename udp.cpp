@@ -184,7 +184,7 @@ xlet::UDPIn::UDPIn(const std::string ipstring, int port, bool qSynced) : UDPlet(
             {
                 inDataBuffer.resize(n);
                 if (queueManaged) qin_.push(xlet::Data(sockAddToPeerId(cliaddr), inDataBuffer));
-                else letDataFromConnectionIsReadyToBeRead.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
+else letDataFromPeerIsReady.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
             }
         }
     }};
@@ -196,7 +196,7 @@ xlet::UDPIn::UDPIn(const std::string ipstring, int port, bool qSynced) : UDPlet(
                 while (qin_.empty());
                 auto data = qin_.front();
                 qin_.pop();
-                letDataFromConnectionIsReadyToBeRead.Emit(data.first, data.second);
+                letDataFromPeerIsReady.Emit(data.first, data.second);
             }
         }};
     }
@@ -231,7 +231,7 @@ xlet::UDPInOut::UDPInOut(const std::string ipstring, int port, bool listen, bool
             {
                 inDataBuffer.resize(n);
                 if (queueManaged) qin_.push(xlet::Data(sockAddToPeerId(cliaddr), inDataBuffer));
-                else letDataFromConnectionIsReadyToBeRead.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
+                else letDataFromPeerIsReady.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
             }
         }
     }};
@@ -245,7 +245,7 @@ xlet::UDPInOut::UDPInOut(const std::string ipstring, int port, bool listen, bool
                 {
                     auto data = qin_.front();
                     qin_.pop();
-                    letDataFromConnectionIsReadyToBeRead.Emit(data.first, data.second);
+                    letDataFromPeerIsReady.Emit(data.first, data.second);
                 }
                 if (!qout_.empty())
                 {

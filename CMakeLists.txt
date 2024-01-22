@@ -74,7 +74,7 @@ target_link_libraries(xletlib
         uvgrtp
 )
 
-#[[add_executable(udsexample
+add_executable(udsexample
     examples/udsexample.cpp)
 
 target_include_directories(udsexample
@@ -92,7 +92,7 @@ target_include_directories(udpexample
         ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(udpexample
     PRIVATE
-        xletlib)]]
+        xletlib)
 
 add_executable(relayrouter
         examples/relayrouter.cpp)

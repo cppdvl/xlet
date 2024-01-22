@@ -21,8 +21,8 @@ class UDPlet : public xlet::Xlet {
     DAWn::Events::Signal<uint64_t>                                      letThreadStarted;
     DAWn::Events::Signal<const std::string, std::vector<std::byte>&>    letDataReadyToBeTransmitted;
     DAWn::Events::Signal<xlet::Data>                                    letDataFromServiceIsReadyToBeRead;
-    DAWn::Events::Signal<uint64_t, std::vector<std::byte>&>&            letDataFromPeerReady{letDataFromConnectionIsReadyToBeRead};
-    DAWn::Events::Signal<uint64_t, std::thread::id>                    letBindedOn;
+    DAWn::Events::Signal<uint64_t, std::vector<std::byte>&>             letDataFromPeerReady;
+    DAWn::Events::Signal<uint64_t, std::thread::id>                     letBindedOn;
 
     //Use only if needed
     std::thread qThread;
