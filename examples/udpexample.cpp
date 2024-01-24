@@ -86,7 +86,7 @@ void runServer(const std::string& ip, int port)
         log(xlet::UDPlet::letIdToString(letId) , ss.str());
     });
 
-    udpServer.letDataFromPeerReady.Connect(handleServerIncomingData);
+    udpServer.letDataFromPeerIsReady.Connect(handleServerIncomingData);
     //std::thread inboundDataHandlerThread(udpServer.inboundDataHandlerFunc);
 
     if (udpServer.valid()) {

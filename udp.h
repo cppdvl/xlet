@@ -3,6 +3,7 @@
 
 
 #include "xlet.h"
+#include <mutex>
 
 class UDPlet : public xlet::Xlet {
  protected:
@@ -10,6 +11,7 @@ class UDPlet : public xlet::Xlet {
     uint64_t            servId_;
     int                 sockfd_;
     bool                queueManaged{false};
+    std::mutex          sockMutex;
  public:
     UDPlet(const std::string address, int port, xlet::Direction direction = xlet::Direction::INOUTB, bool theLetListens = false);
     ~UDPlet() override {}
@@ -21,7 +23,8 @@ class UDPlet : public xlet::Xlet {
     DAWn::Events::Signal<uint64_t>                                      letThreadStarted;
     DAWn::Events::Signal<const std::string, std::vector<std::byte>&>    letDataReadyToBeTransmitted;
     DAWn::Events::Signal<xlet::Data>                                    letDataFromServiceIsReadyToBeRead;
-    DAWn::Events::Signal<uint64_t, std::vector<std::byte>&>             letDataFromPeerReady;
+    DAWn::Events::Signal<uint64_t, std::vector<std::byte>&>
+        letDataFromPeerIsReady;
     DAWn::Events::Signal<uint64_t, std::thread::id>                     letBindedOn;
 
     //Use only if needed
@@ -34,13 +37,14 @@ class UDPlet : public xlet::Xlet {
     {
         qPause = false;
     }
-    virtual void join() = 0;
+
+    virtual void join(){
+      if (recvThread.joinable()) recvThread.join();
+      if (queueManaged && qThread.joinable()) qThread.join();
+    };
 
 
 
-    //Queue managed inbound Data
-    void enableQueueManagement();
-    void disableQueueManagement();
     //Static Helpers
     static struct sockaddr_in toSystemSockAddr(std::string ipstring, int port);
     static uint64_t sockAddrPortToUInt64(struct sockaddr_in& addr);
@@ -62,7 +66,12 @@ class UDPOut : public UDPlet, public xlet::Out {
 
  public:
     UDPOut(const std::string address, int port, bool qSynced = false);
-    ~UDPOut() override { close (sockfd_);}
+    ~UDPOut() override {
+      std::lock_guard<std::mutex> lock(sockMutex);
+      close (sockfd_);
+      sockfd_ = -1;
+      join();
+    }
     virtual void join() override;
 };
 
@@ -70,7 +79,12 @@ class UDPIn : public UDPlet, public xlet::In {
 
  public:
     UDPIn(const std::string address, int port, bool qSynced = false);
-    ~UDPIn() override {close (sockfd_);}
+    ~UDPIn() override {
+      std::lock_guard<std::mutex> lock(sockMutex);
+      close (sockfd_);
+      sockfd_ = -1;
+      join();
+    }
     virtual void join() override;
 
 };
@@ -78,7 +92,12 @@ class UDPIn : public UDPlet, public xlet::In {
 class UDPInOut : public UDPlet, public xlet::InOut {
  public:
     UDPInOut(const std::string address, int port, bool listen = false, bool qSynced = false);
-    ~UDPInOut() override {close (sockfd_);}
+    ~UDPInOut() override {
+      std::lock_guard<std::mutex> lock(sockMutex);
+      close (sockfd_);
+      sockfd_ = -1;
+      join();
+    }
     virtual void join() override;
 
 };

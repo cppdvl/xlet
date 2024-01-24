@@ -90,7 +90,6 @@ namespace xlet {
         DAWn::Events::Signal<uint64_t, uint64_t >   letAcceptedANewConnection;
         DAWn::Events::Signal<uint64_t>              letWillCloseConnection;
 
-        DAWn::Events::Signal<uint64_t, std::vector<std::byte>&> letDataFromPeerIsReady;
 
      protected:
         Transport transport;

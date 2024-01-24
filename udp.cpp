@@ -143,16 +143,18 @@ xlet::UDPOut::UDPOut(const std::string ipstring, int port, bool qSynced) : UDPle
     {
         queueManaged = true;
         qThread = std::thread{[this](){
-            while (qPause);
-            const std::string peerIdString = letIdToString(sockAddToPeerId(servaddr_));
-            letThreadStarted.Emit(static_cast<uint64_t>(sockfd_));
-            while (true) {
-                while (qout_.empty());
-                auto data = qout_.front();
-                qout_.pop();
-                letDataReadyToBeTransmitted.Emit(letIdToString(data.first), data.second);
-                pushData(data.first, data.second);
+          while (qPause  && sockfd_ > 0);
+          const std::string peerIdString = letIdToString(sockAddToPeerId(servaddr_));
+          letThreadStarted.Emit(static_cast<uint64_t>(sockfd_));
+          while (sockfd_ > 0) {
+            if (!qout_.empty()){
+              std::lock_guard<std::mutex> lock(sockMutex);
+              auto data = qout_.front();
+              qout_.pop();
+              letDataReadyToBeTransmitted.Emit(letIdToString(data.first), data.second);
+              pushData(data.first, data.second);
             }
+          }
         }};
     }
 }
@@ -166,14 +168,19 @@ xlet::UDPIn::UDPIn(const std::string ipstring, int port, bool qSynced) : UDPlet(
 {
     queueManaged = qSynced;
     recvThread = std::thread{[this](){
-        while (qPause);
+        while (qPause && sockfd_ > 0);
         letBindedOn.Emit(servId_, std::this_thread::get_id());
         letThreadStarted.Emit(static_cast<uint64_t>(sockfd_));
-        while (true) {
+        while (sockfd_ > 0) {
             struct sockaddr_in cliaddr;
             socklen_t len = sizeof(cliaddr);
             std::vector<std::byte> inDataBuffer(XLET_MAXBLOCKSIZE, std::byte{0});
-            ssize_t n = recvfrom(sockfd_, inDataBuffer.data(), inDataBuffer.size(), 0, (struct sockaddr *) &cliaddr, &len);
+            ssize_t n = 0;
+            {
+              std::lock_guard<std::mutex> lock(sockMutex);
+                    n = recvfrom(sockfd_, inDataBuffer.data(), inDataBuffer.size(), 0, (struct sockaddr *) &cliaddr, &len);
+            }
+
             if (n < 0) {
                 if (errno != EWOULDBLOCK && errno != EAGAIN) {
                     letOperationalError.Emit(sockfd_, "recvfrom");
@@ -183,29 +190,29 @@ xlet::UDPIn::UDPIn(const std::string ipstring, int port, bool qSynced) : UDPlet(
             else if (n > 0)
             {
                 inDataBuffer.resize(n);
-                if (queueManaged) qin_.push(xlet::Data(sockAddToPeerId(cliaddr), inDataBuffer));
-else letDataFromPeerIsReady.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
+                {
+                  std::lock_guard<std::mutex> lock(sockMutex);
+                  if (queueManaged) qin_.push(xlet::Data(sockAddToPeerId(cliaddr), inDataBuffer));
+                  else letDataFromPeerIsReady.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
+                }
             }
         }
     }};
     if (queueManaged)
     {
         qThread = std::thread{[this](){
-            while (qPause);
-            while (true) {
-                while (qin_.empty());
-                auto data = qin_.front();
-                qin_.pop();
-                letDataFromPeerIsReady.Emit(data.first, data.second);
+            while (qPause && sockfd_ > 0);
+            while (sockfd_ > 0) {
+                if (qin_.empty()){
+                  std::lock_guard<std::mutex> lock(sockMutex);
+                  auto data = qin_.front();
+                  qin_.pop();
+                  letDataFromPeerIsReady.Emit(data.first, data.second);
+                }
             }
         }};
     }
 
-}
-void xlet::UDPIn::join()
-{
-    recvThread.join();
-    if (queueManaged && qThread.joinable()) qThread.join();
 }
 /********************/
 /****** UDPInOut *****/
@@ -213,14 +220,19 @@ xlet::UDPInOut::UDPInOut(const std::string ipstring, int port, bool listen, bool
 {
     queueManaged = qSynced;
     recvThread = std::thread{[this](){
-        while (qPause);
+        while (qPause && sockfd_ > 0);
+        if (sockfd_ < 0) return;
         letBindedOn.Emit(servId_, std::this_thread::get_id());
         letThreadStarted.Emit(static_cast<uint64_t>(sockfd_));
-        while (true) {
+        while (sockfd_ > 0) {
             struct sockaddr_in cliaddr;
             socklen_t len = sizeof(cliaddr);
             std::vector<std::byte> inDataBuffer(XLET_MAXBLOCKSIZE, std::byte{0});
-            ssize_t n = recvfrom(sockfd_, inDataBuffer.data(), inDataBuffer.size(), 0, (struct sockaddr *) &cliaddr, &len);
+            ssize_t n = 0;
+            {
+                std::lock_guard<std::mutex> lock(sockMutex);
+                n = recvfrom(sockfd_, inDataBuffer.data(), inDataBuffer.size(), 0, (struct sockaddr *) &cliaddr, &len);
+            }
             if (n < 0) {
                 if (errno != EWOULDBLOCK && errno != EAGAIN) {
                     letOperationalError.Emit(sockfd_, "recvfrom");
@@ -230,38 +242,38 @@ xlet::UDPInOut::UDPInOut(const std::string ipstring, int port, bool listen, bool
             else if (n > 0)
             {
                 inDataBuffer.resize(n);
-                if (queueManaged) qin_.push(xlet::Data(sockAddToPeerId(cliaddr), inDataBuffer));
-                else letDataFromPeerIsReady.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
+                {
+                    std::lock_guard<std::mutex> lock(sockMutex);
+                    if (queueManaged) qin_.push(xlet::Data(sockAddToPeerId(cliaddr), inDataBuffer));
+                    else letDataFromPeerIsReady.Emit(sockAddToPeerId(cliaddr), inDataBuffer);
+                }
             }
         }
     }};
     if (queueManaged)
     {
         qThread = std::thread{[this](){
-            while (qPause);
-            letThreadStarted.Emit(static_cast<uint64_t>(sockfd_));
-            while (true) {
-                if  (!qin_.empty())
-                {
-                    auto data = qin_.front();
-                    qin_.pop();
-                    letDataFromPeerIsReady.Emit(data.first, data.second);
-                }
-                if (!qout_.empty())
-                {
-                    auto data = qout_.front();
-                    qout_.pop();
-                    letDataReadyToBeTransmitted.Emit(letIdToString(data.first), data.second);
-                    pushData(data.first, data.second);
-                }
-            }
+          while (qPause);
+          letThreadStarted.Emit(static_cast<uint64_t>(sockfd_));
+          while (sockfd_ > 0) {
+              if  (!qin_.empty())
+              {
+                  std::lock_guard<std::mutex> lock(sockMutex);
+                  auto data = qin_.front();
+                  qin_.pop();
+                  letDataFromPeerIsReady.Emit(data.first, data.second);
+              }
+              if (!qout_.empty())
+              {
+                  std::lock_guard<std::mutex> lock(sockMutex);
+                  auto data = qout_.front();
+                  qout_.pop();
+                  letDataReadyToBeTransmitted.Emit(letIdToString(data.first), data.second);
+                  pushData(data.first, data.second);
+              }
+          }
         }};
     }
-}
-void xlet::UDPInOut::join()
-{
-    recvThread.join();
-    if (queueManaged && qThread.joinable()) qThread.join();
 }
 
 
