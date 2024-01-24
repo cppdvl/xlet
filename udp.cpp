@@ -62,9 +62,6 @@
         return ss.str();
     }
 
-
-
-
 xlet::UDPlet::UDPlet(
     const std::string ipstring,
     int port,
@@ -157,10 +154,6 @@ xlet::UDPOut::UDPOut(const std::string ipstring, int port, bool qSynced) : UDPle
           }
         }};
     }
-}
-void xlet::UDPOut::join()
-{
-    if (queueManaged && qThread.joinable()) qThread.join();
 }
 /********************/
 /******** UDPIn ******/

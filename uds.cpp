@@ -131,7 +131,7 @@ xlet::UDSlet::UDSlet(
                                 continue;
                             }
                             dataInBlock.resize(bytesRead);
-                            letDataFromPeerIsReady.Emit(0, dataInBlock);
+                            letDataFromPeerReady.Emit(0, dataInBlock);
                         }
                     }
                     pollfds_.erase(std::remove_if(pollfds_.begin(), pollfds_.end(), [](auto& fd){return fd.fd < 0;}), pollfds_.end());

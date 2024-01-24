@@ -87,7 +87,7 @@ void serverMainLoop(const std::string& sockpath)
         std::stringstream ss; ss << "Closing connection";
         log( connfd , ss.str());
     });
-    udsServer.letDataFromPeerIsReady.Connect(handleServerIncomingData);
+    udsServer.letDataFromPeerReady.Connect(handleServerIncomingData);
     udsServer.letOperationalError.Connect(+[](int sockfd, const std::string& msg){
         std::stringstream ss; ss << "Error on socket: " << sockfd << " : " << msg;
         log( sockfd , ss.str());

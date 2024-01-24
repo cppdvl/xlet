@@ -40,8 +40,8 @@ class UDPlet : public xlet::Xlet {
 
     virtual void join(){
       if (recvThread.joinable()) recvThread.join();
-      if (queueManaged && qThread.joinable()) qThread.join();
-    };
+      if (qThread.joinable()) qThread.join();
+    }
 
 
 
@@ -72,7 +72,6 @@ class UDPOut : public UDPlet, public xlet::Out {
       sockfd_ = -1;
       join();
     }
-    virtual void join() override;
 };
 
 class UDPIn : public UDPlet, public xlet::In {
@@ -85,7 +84,6 @@ class UDPIn : public UDPlet, public xlet::In {
       sockfd_ = -1;
       join();
     }
-    virtual void join() override;
 
 };
 
@@ -98,7 +96,6 @@ class UDPInOut : public UDPlet, public xlet::InOut {
       sockfd_ = -1;
       join();
     }
-    virtual void join() override;
 
 };
 
