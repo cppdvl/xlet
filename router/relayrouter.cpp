@@ -39,7 +39,7 @@ uint64_t CreateStudio(std::string ip, int port)
         return 0;
     }
 
-    auto spRouter = CreateRouter(ip, port, true, false);
+    auto spRouter = CreateRouter(ip, port, true, true);
     if (!spRouter)
     {
         return 0;
@@ -262,7 +262,30 @@ void removeAuthorizedPeer(uint64_t peerId)
     authorizedPeers.erase(peerId);
 }
 
-
+std::shared_ptr<xlet::UDPInOut> GetRouter(uint64_t studioId)
+{
+    auto studioFound = studios_router.find(studioId) != studios_router.end();
+    if (!studioFound)
+    {
+        std::cout << "CRITICAL ERROR: Studio not found: " << xlet::UDPlet::letIdToString(studioId) << std::endl;
+        return nullptr;
+    }
+    auto ptrRouter = studios_router[studioId].lock();
+    if (!ptrRouter)
+    {
+        std::cout << "CRITICAL ERROR: Studio not found: " << xlet::UDPlet::letIdToString(studioId) << std::endl;
+        return nullptr;
+    }
+    if (ptrRouter->valid())
+    {
+        return ptrRouter;
+    }
+    else
+    {
+        std::cout << "CRITICAL ERROR: Studio not valid: " << xlet::UDPlet::letIdToString(studioId) << std::endl;
+        return nullptr;
+    }
+}
 
 
 
