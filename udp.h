@@ -30,7 +30,7 @@ class UDPlet : public xlet::Xlet {
     //Use only if needed
     std::thread qThread;
     std::thread recvThread;
-    bool        qPause = true;
+    bool        qPause{true};
     std::thread inboundDataHandlerThread;
 
     inline void run()
@@ -56,6 +56,9 @@ class UDPlet : public xlet::Xlet {
     static int peerIdToPort(uint64_t peerId);
 
     int getSocket() const {return sockfd_;}
+
+    //UDPlet specific
+    uint64_t getServId() const {return servId_;}
 
 };
 
