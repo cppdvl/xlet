@@ -79,7 +79,7 @@ void serverMainLoop(const std::string& sockpath)
 {
     xlet::UDSInOut udsServer(sockpath, true);
 
-    udsServer.letIsListening.Connect(+[](uint64_t sockfd, std::__thread_id id){
+    udsServer.letIsListening.Connect(+[](uint64_t sockfd, std::thread::id id){
         std::stringstream ss; ss << "UDS Server is listening on thread: " << id;
         log( sockfd , ss.str());
     });

@@ -81,7 +81,7 @@ void runServer(const std::string& ip, int port)
 {
     xlet::UDPInOut udpServer(ip, 8899, true);
 
-    udpServer.letBindedOn.Connect(+[](uint64_t letId, std::__thread_id id){
+    udpServer.letBindedOn.Connect(+[](uint64_t letId, std::thread::id id){
         std::stringstream ss; ss << "UDP Server binded and waiting for data on thread: " << id;
         log(xlet::UDPlet::letIdToString(letId) , ss.str());
     });
