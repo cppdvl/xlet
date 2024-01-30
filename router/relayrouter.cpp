@@ -15,7 +15,7 @@ static std::set<uint64_t>   attemptedPeers{};
 //TODO:UGLY HACK Change this.
 using RTABLE = std::array<std::set<uint64_t>, 2>;
 
-static std::map<uint64_t, std::weak_ptr<xlet::UDPInOut>> studios_router{};
+static std::map<uint64_t, std::shared_ptr<xlet::UDPInOut>> studios_router{};
 static std::map<uint64_t, RTABLE> studios_routing{};
 static std::map<uint64_t, std::map<uint32_t, uint64_t>> studios_uidtopeerid{};
 static std::map<uint64_t, std::set<uint64_t>> studios_authorizedPeers{};
@@ -26,11 +26,10 @@ uint64_t CreateStudio(std::string ip, int port)
     auto sckadd             = xlet::UDPlet::toSystemSockAddr(ip,port);
     uint64_t studioIndex    = xlet::UDPlet::sockAddToPeerId(sckadd);
 
-
     auto studioFound = studios_router.find(studioIndex) != studios_router.end();
     if (studioFound)
     {
-        auto sp = studios_router[studioIndex].lock();
+        auto sp = studios_router[studioIndex];
         if (sp)
         {
             if (sp->valid()) return studioIndex;
@@ -76,7 +75,7 @@ bool DestroyStudio(uint64_t studioIndex)
     auto studioFound = studios_router.find(studioIndex) != studios_router.end();
     if (studioFound)
     {
-        auto sp = studios_router[studioIndex].lock();
+        auto sp = studios_router[studioIndex];
 
         if (sp)
         {
@@ -99,7 +98,7 @@ bool UpdateStudio(uint64_t studioIndex, std::vector<uint64_t> peers)
         std::cout << "Studio Not Found: Std.Index " << studioIndex << std::endl; return false;
     }
 
-    auto spRouter = studios_router[studioIndex].lock();
+    auto spRouter = studios_router[studioIndex];
     if (!spRouter)
     {
         std::cout << "Weak Ptr Expired: Std.Index " << studioIndex << std::endl; DestroyStudio(studioIndex); return false;
@@ -136,7 +135,7 @@ std::shared_ptr<xlet::UDPInOut> CreateRouter (std::string ip, int port, bool lis
     std::shared_ptr<xlet::UDPInOut> spRouter;
     if (routerFound)
     {
-        spRouter = studios_router[studioId].lock();
+        spRouter = studios_router[studioId];
         if (spRouter)
         {
             std::cout << "Router already exists: " << xlet::UDPlet::letIdToString(studioId) << std::endl;
@@ -172,7 +171,7 @@ std::shared_ptr<xlet::UDPInOut> CreateRouter (std::string ip, int port, bool lis
                 std::cout << "CRITICAL ERROR: Studio not found: " << xlet::UDPlet::letIdToString(studioId) << std::endl;
                 return;
             }
-            auto ptrRouter = studios_router[studioId].lock();
+            auto ptrRouter = studios_router[studioId];
             if (!ptrRouter)
             {
                 std::cout << "CRITICAL ERROR: Studio not found: " << xlet::UDPlet::letIdToString(studioId) << std::endl;
@@ -270,7 +269,7 @@ std::shared_ptr<xlet::UDPInOut> GetRouter(uint64_t studioId)
         std::cout << "CRITICAL ERROR: Studio not found: " << xlet::UDPlet::letIdToString(studioId) << std::endl;
         return nullptr;
     }
-    auto ptrRouter = studios_router[studioId].lock();
+    auto ptrRouter = studios_router[studioId];
     if (!ptrRouter)
     {
         std::cout << "CRITICAL ERROR: Studio not found: " << xlet::UDPlet::letIdToString(studioId) << std::endl;
