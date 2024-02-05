@@ -22,18 +22,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Include FetchContent module
 include(FetchContent)
 
-# Fetch uvgRTP
-FetchContent_Declare(
-    uvgrtp
-    GIT_REPOSITORY https://github.com/ultravideo/uvgRTP.git
-    GIT_TAG        master  # Specify the branch, tag, or commit
-)
-FetchContent_GetProperties(uvgrtp)
-if(NOT uvgrtp_POPULATED)
-    FetchContent_Populate(uvgrtp)
-    add_subdirectory(${uvgrtp_SOURCE_DIR} ${uvgrtp_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
-
 # Fetch nlohmann_json
 FetchContent_Declare(
     signal_slots
@@ -50,7 +38,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(dotenv-cpp)
 
 # Include directories
-include_directories(${uvgrtp_SOURCE_DIR}/include)
 include_directories(${signal_slots_SOURCE_DIR})
 
 # Define your library or executable target
@@ -69,10 +56,6 @@ target_include_directories(xletlib
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR})
 # Link libraries
-target_link_libraries(xletlib
-    PRIVATE
-        uvgrtp
-)
 
 add_executable(udsexample
     examples/udsexample.cpp)
