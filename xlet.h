@@ -82,10 +82,10 @@ namespace xlet {
 
 
 
-        DAWn::Events::Signal<uint64_t, std::thread::id>    letIsListening;
-        DAWn::Events::Signal<uint64_t, std::string>         letOperationalError;
-        DAWn::Events::Signal<>                              letInvalidSocketError;
-        DAWn::Events::Signal<>                              letIsIINBOnly;
+        DAWn::Events::Signal<uint64_t, std::thread::id> letIsListening;
+        DAWn::Events::Signal<uint64_t, std::string>     letOperationalError;
+        DAWn::Events::Signal<>                          letInvalidSocketError;
+        DAWn::Events::Signal<>                          letIsIINBOnly;
 
         DAWn::Events::Signal<uint64_t, uint64_t >   letAcceptedANewConnection;
         DAWn::Events::Signal<uint64_t>              letWillCloseConnection;

@@ -113,6 +113,7 @@ std::size_t xlet::UDPlet::pushData(const std::vector<std::byte>& data) {
 std::size_t xlet::UDPlet::pushData(const uint64_t peerId,  const std::vector<std::byte>& data) {
     if (sockfd_ < 0) {
         //TODO: Trigger a critical error signal
+        letInvalidSocketError.Emit();
         return 0;
     }
 
@@ -122,6 +123,8 @@ std::size_t xlet::UDPlet::pushData(const uint64_t peerId,  const std::vector<std
         auto bytesSentNow = sendto(sockfd_, data.data() + bytesSent, data.size() - bytesSent, 0, (struct sockaddr *) &addr, sizeof(addr));
         if (bytesSentNow < 0) {
             //Trigger a critical error signal
+            auto errorMessage = strerror(errno);
+            letOperationalError.Emit(sockfd_, errorMessage);
             return 0;
         }
         bytesSent += bytesSentNow;
