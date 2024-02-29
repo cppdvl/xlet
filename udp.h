@@ -91,14 +91,14 @@ class UDPIn : public UDPlet, public xlet::In {
 
 class UDPInOut : public UDPlet, public xlet::InOut {
  public:
-    UDPInOut(const std::string address, int port, bool listen = false, bool qSynced = false);
+    UDPInOut(const std::string address, int port, bool listen = false, bool qSynced = false, bool loopback = false);
     ~UDPInOut() override {
       std::lock_guard<std::mutex> lock(sockMutex);
       close (sockfd_);
       sockfd_ = -1;
       join();
     }
-
+    DAWn::Events::Signal<> letIsLoopbackOnly;
 };
 
 

@@ -8,6 +8,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 
+#SET MAC INTEL FLAGS
+option (USE_MAC_INTEL "Use Mac Intel flags" OFF)
+if (USE_MAC_INTEL)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -arch x86_64")
+endif ()
+
 # Set the default build type to Debug if none was specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
@@ -30,13 +36,6 @@ FetchContent_Declare(
     )
 FetchContent_MakeAvailable(signal_slots)
 
-FetchContent_Declare(
-        dotenv-cpp
-        GIT_REPOSITORY git@github.com:laserpants/dotenv-cpp.git
-        GIT_TAG        master
-)
-FetchContent_MakeAvailable(dotenv-cpp)
-
 # Include directories
 include_directories(${signal_slots_SOURCE_DIR})
 
@@ -49,16 +48,20 @@ add_library(xletlib STATIC
     udp.cpp
     uds.cpp
     router/relayrouter.cpp
-
 )
+
+
+
 
 target_include_directories(xletlib
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR})
 # Link libraries
 
-add_executable(udsexample
-    examples/udsexample.cpp)
+option (MAKE_EXAMPLES "Build examples" OFF)
+if (MAKE_EXAMPLES)
+    add_executable(udsexample
+        examples/udsexample.cpp)
 
 target_include_directories(udsexample
         PRIVATE
@@ -85,4 +88,5 @@ target_include_directories(relayrouter
 target_link_libraries(relayrouter
     PRIVATE
         xletlib)
+endif()
 
